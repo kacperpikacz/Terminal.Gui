@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -59,40 +60,46 @@ namespace Terminal.Gui.ViewTests {
 		[Fact]
 		public void KeyBindings_Command ()
 		{
-			DateField df = new DateField (DateTime.Parse ("12/12/1971"));
-			df.ReadOnly = true;
-			Assert.True (df.ProcessKey (new KeyEvent (Key.DeleteChar, new KeyModifiers ())));
-			Assert.Equal (" 12/12/1971", df.Text);
-			df.ReadOnly = false;
-			Assert.True (df.ProcessKey (new KeyEvent (Key.D | Key.CtrlMask, new KeyModifiers ())));
-			Assert.Equal (" 02/12/1971", df.Text);
-			df.CursorPosition = 4;
-			df.ReadOnly = true;
-			Assert.True (df.ProcessKey (new KeyEvent (Key.Delete, new KeyModifiers ())));
-			Assert.Equal (" 02/12/1971", df.Text);
-			df.ReadOnly = false;
-			Assert.True (df.ProcessKey (new KeyEvent (Key.Backspace, new KeyModifiers ())));
-			Assert.Equal (" 02/02/1971", df.Text);
-			Assert.True (df.ProcessKey (new KeyEvent (Key.Home, new KeyModifiers ())));
-			Assert.Equal (1, df.CursorPosition);
-			Assert.True (df.ProcessKey (new KeyEvent (Key.End, new KeyModifiers ())));
-			Assert.Equal (10, df.CursorPosition);
-			Assert.True (df.ProcessKey (new KeyEvent (Key.A | Key.CtrlMask, new KeyModifiers ())));
-			Assert.Equal (1, df.CursorPosition);
-			Assert.True (df.ProcessKey (new KeyEvent (Key.E | Key.CtrlMask, new KeyModifiers ())));
-			Assert.Equal (10, df.CursorPosition);
-			Assert.True (df.ProcessKey (new KeyEvent (Key.CursorLeft, new KeyModifiers ())));
-			Assert.Equal (9, df.CursorPosition);
-			Assert.True (df.ProcessKey (new KeyEvent (Key.CursorRight, new KeyModifiers ())));
-			Assert.Equal (10, df.CursorPosition);
-			Assert.False (df.ProcessKey (new KeyEvent (Key.A, new KeyModifiers ())));
-			df.ReadOnly = true;
-			df.CursorPosition = 1;
-			Assert.True (df.ProcessKey (new KeyEvent (Key.D1, new KeyModifiers ())));
-			Assert.Equal (" 02/02/1971", df.Text);
-			df.ReadOnly = false;
-			Assert.True (df.ProcessKey (new KeyEvent (Key.D1, new KeyModifiers ())));
-			Assert.Equal (" 12/02/1971", df.Text);
+			var currentCulture = CultureInfo.CurrentCulture;
+			CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo ("en-US");
+			try {
+				DateField df = new DateField (DateTime.Parse ("12/12/1971"));
+				df.ReadOnly = true;
+				Assert.True (df.ProcessKey (new KeyEvent (Key.DeleteChar, new KeyModifiers ())));
+				Assert.Equal (" 12/12/1971", df.Text);
+				df.ReadOnly = false;
+				Assert.True (df.ProcessKey (new KeyEvent (Key.D | Key.CtrlMask, new KeyModifiers ())));
+				Assert.Equal (" 02/12/1971", df.Text);
+				df.CursorPosition = 4;
+				df.ReadOnly = true;
+				Assert.True (df.ProcessKey (new KeyEvent (Key.Delete, new KeyModifiers ())));
+				Assert.Equal (" 02/12/1971", df.Text);
+				df.ReadOnly = false;
+				Assert.True (df.ProcessKey (new KeyEvent (Key.Backspace, new KeyModifiers ())));
+				Assert.Equal (" 02/02/1971", df.Text);
+				Assert.True (df.ProcessKey (new KeyEvent (Key.Home, new KeyModifiers ())));
+				Assert.Equal (1, df.CursorPosition);
+				Assert.True (df.ProcessKey (new KeyEvent (Key.End, new KeyModifiers ())));
+				Assert.Equal (10, df.CursorPosition);
+				Assert.True (df.ProcessKey (new KeyEvent (Key.A | Key.CtrlMask, new KeyModifiers ())));
+				Assert.Equal (1, df.CursorPosition);
+				Assert.True (df.ProcessKey (new KeyEvent (Key.E | Key.CtrlMask, new KeyModifiers ())));
+				Assert.Equal (10, df.CursorPosition);
+				Assert.True (df.ProcessKey (new KeyEvent (Key.CursorLeft, new KeyModifiers ())));
+				Assert.Equal (9, df.CursorPosition);
+				Assert.True (df.ProcessKey (new KeyEvent (Key.CursorRight, new KeyModifiers ())));
+				Assert.Equal (10, df.CursorPosition);
+				Assert.False (df.ProcessKey (new KeyEvent (Key.A, new KeyModifiers ())));
+				df.ReadOnly = true;
+				df.CursorPosition = 1;
+				Assert.True (df.ProcessKey (new KeyEvent (Key.D1, new KeyModifiers ())));
+				Assert.Equal (" 02/02/1971", df.Text);
+				df.ReadOnly = false;
+				Assert.True (df.ProcessKey (new KeyEvent (Key.D1, new KeyModifiers ())));
+				Assert.Equal (" 12/02/1971", df.Text);
+			} finally {
+				CultureInfo.CurrentCulture = currentCulture;
+			}
 		}
 	}
 }
