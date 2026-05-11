@@ -695,6 +695,17 @@ namespace Terminal.Gui.CoreTests {
 		}
 
 		[Fact]
+		public void GetEscapeResult_With_Non_Escape_Input_Does_Not_Throw ()
+		{
+			char [] kChars = new char [] { '\0' };
+			(c1Control, code, values, terminating) = EscSeqUtils.GetEscapeResult (kChars);
+			Assert.Null (c1Control);
+			Assert.Null (code);
+			Assert.Null (values);
+			Assert.Null (terminating);
+		}
+
+		[Fact]
 		public void GetC1ControlChar_Tests ()
 		{
 			Assert.Equal ("IND", EscSeqUtils.GetC1ControlChar ('D'));

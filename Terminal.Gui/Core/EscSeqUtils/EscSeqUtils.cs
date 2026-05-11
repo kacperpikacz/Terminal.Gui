@@ -215,7 +215,7 @@ namespace Terminal.Gui {
 				return (null, null, null, null);
 			}
 			if (kChar [0] != '\x1b') {
-				throw new InvalidOperationException ("Invalid escape character!");
+				return (null, null, null, null);
 			}
 			if (kChar.Length == 1) {
 				return ("ESC", null, null, null);
