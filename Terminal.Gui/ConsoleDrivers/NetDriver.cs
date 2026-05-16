@@ -789,7 +789,9 @@ namespace Terminal.Gui {
 						setClip ();
 					}
 				} else {
-					Console.Out.Write ($"\x1b[8;{Rows};{Cols}t");
+					// Do not ask Unix terminals to resize their OS window while handling a resize.
+					// macOS Terminal can stall during native fullscreen transitions if the app
+					// emits XTWINOPS resize requests while Terminal is changing spaces.
 				}
 			}
 
