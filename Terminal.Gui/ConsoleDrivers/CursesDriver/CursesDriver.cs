@@ -103,7 +103,7 @@ namespace Terminal.Gui {
 						Curses.addch ((int)(uint)' ');
 						contents [crow, ccol, 0] = (int)(uint)' ';
 					} else {
-						Curses.addch ((int)(uint)rune);
+						Curses.addch (MapLineDrawingRuneToAcs (rune));
 						contents [crow, ccol, 0] = (int)(uint)rune;
 					}
 					contents [crow, ccol, 1] = CurrentAttribute;
@@ -128,6 +128,34 @@ namespace Terminal.Gui {
 			if (sync) {
 				UpdateScreen ();
 			}
+		}
+
+		static int MapLineDrawingRuneToAcs (Rune rune)
+		{
+			return (uint)rune switch {
+				'\u2500' => Curses.ACS_HLINE,
+				'\u2550' => Curses.ACS_HLINE,
+				'\u2502' => Curses.ACS_VLINE,
+				'\u2551' => Curses.ACS_VLINE,
+				'\u250c' => Curses.ACS_ULCORNER,
+				'\u2554' => Curses.ACS_ULCORNER,
+				'\u256d' => Curses.ACS_ULCORNER,
+				'\u2510' => Curses.ACS_URCORNER,
+				'\u2557' => Curses.ACS_URCORNER,
+				'\u256e' => Curses.ACS_URCORNER,
+				'\u2514' => Curses.ACS_LLCORNER,
+				'\u255a' => Curses.ACS_LLCORNER,
+				'\u2570' => Curses.ACS_LLCORNER,
+				'\u2518' => Curses.ACS_LRCORNER,
+				'\u255d' => Curses.ACS_LRCORNER,
+				'\u256f' => Curses.ACS_LRCORNER,
+				'\u251c' => Curses.ACS_LTEE,
+				'\u2524' => Curses.ACS_RTEE,
+				'\u252c' => Curses.ACS_TTEE,
+				'\u2534' => Curses.ACS_BTEE,
+				'\u253c' => Curses.ACS_PLUS,
+				_ => (int)(uint)rune
+			};
 		}
 
 		public override void AddStr (ustring str)
