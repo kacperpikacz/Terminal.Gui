@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Threading;
 
 namespace Terminal.Gui {
 	/// <summary>
@@ -116,6 +117,14 @@ namespace Terminal.Gui {
 		/// <param name="action">the action to be invoked on the main processing thread.</param>
 		public void Invoke (Action action)
 		{
+			if (action == null)
+				throw new ArgumentNullException (nameof (action));
+
+			if (Application._mainThreadId == Thread.CurrentThread.ManagedThreadId) {
+				action ();
+				return;
+			}
+
 			AddIdle (() => {
 				action ();
 				return false;
