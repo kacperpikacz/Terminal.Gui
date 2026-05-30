@@ -1,6 +1,7 @@
 <Project>
 
   <PropertyGroup>
+    <LangVersion>latest</LangVersion>
     <!--
        Version info for Terminal.Gui is managed by MinVer (https://github.com/adamralph/minver)
        See Terminal.Gui/README.md for more info.

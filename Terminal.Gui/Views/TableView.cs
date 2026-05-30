@@ -1255,7 +1255,7 @@ namespace Terminal.Gui {
 			// If SelectedColumn is invisible move it to a visible one
 			SelectedColumn = GetNearestVisibleColumn (SelectedColumn, lookRight: true, true);
 
-			var oldRegions = MultiSelectedRegions.ToArray ().Reverse ();
+			var oldRegions = Enumerable.Reverse (MultiSelectedRegions.ToArray ());
 
 			MultiSelectedRegions.Clear ();
 

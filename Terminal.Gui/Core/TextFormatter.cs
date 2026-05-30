@@ -1213,7 +1213,7 @@ namespace Terminal.Gui {
 				case TextDirection.RightLeft_TopBottom:
 				case TextDirection.BottomTop_LeftRight:
 				case TextDirection.BottomTop_RightLeft:
-					runes = runes.Reverse ().ToArray ();
+					runes = Enumerable.Reverse (runes).ToArray ();
 					break;
 				}
 
