@@ -88,7 +88,14 @@ namespace Unix.Terminal {
 #endif
 		static void LoadMethods ()
 		{
-			var libs = UnmanagedLibrary.IsMacOSPlatform ? new string [] { "libncurses.dylib" } : new string [] { "libncursesw.so.6", "libncursesw.so.5" };
+			var libs = UnmanagedLibrary.IsMacOSPlatform
+				? new string [] {
+					"libncursesw.dylib",
+					"/opt/homebrew/opt/ncurses/lib/libncursesw.dylib",
+					"/usr/local/opt/ncurses/lib/libncursesw.dylib",
+					"libncurses.dylib"
+				}
+				: new string [] { "libncursesw.so.6", "libncursesw.so.5" };
 			var attempts = 1;
 			while (true) {
 				try {
@@ -182,11 +189,9 @@ namespace Unix.Terminal {
 			return addwstr (s);
 		}
 
-		static char [] r = new char [1];
-
 		//
 		// Have to wrap the native addch, as it can not
-		// display unicode characters, we have to use addstr
+		// display unicode characters, we have to use addwstr
 		// for that.   but we need addch to render special ACS
 		// characters
 		//
@@ -204,6 +209,69 @@ namespace Unix.Terminal {
 				return methods.mvaddch (y, x, ch);
 			char c = (char)ch;
 			return mvaddwstr (y, x, new String (c, 1));
+		}
+
+		public static int add_wch (int ch) => CallWideChar (ch, ptr => methods.add_wch (ptr));
+
+		public static int mvadd_wch (int y, int x, int ch) => CallWideChar (ch, ptr => methods.mvadd_wch (y, x, ptr));
+
+		static int CallWideChar (int ch, Func<IntPtr, int> action)
+		{
+			var cchar = Marshal.AllocHGlobal (64);
+			try {
+				for (var i = 0; i < 64; i += sizeof (int)) {
+					Marshal.WriteInt32 (cchar, i, 0);
+				}
+
+				return CallWideCharBuffer (ch, chars => {
+					var result = methods.setcchar (cchar, chars, 0, 0, IntPtr.Zero);
+					return result == 0 ? action (cchar) : result;
+				});
+			} finally {
+				Marshal.FreeHGlobal (cchar);
+			}
+		}
+
+		static int CallWideCharBuffer (int ch, Func<IntPtr, int> action)
+		{
+			var buffer = Marshal.AllocHGlobal (2 * sizeof (int));
+			try {
+				Marshal.WriteInt32 (buffer, 0, ch);
+				Marshal.WriteInt32 (buffer, sizeof (int), 0);
+				return action (buffer);
+			} finally {
+				Marshal.FreeHGlobal (buffer);
+			}
+		}
+
+		static int CallWideString (string s, Func<IntPtr, int> action)
+		{
+			var codePointCount = 0;
+			for (var i = 0; i < s.Length; i++, codePointCount++) {
+				if (char.IsHighSurrogate (s [i]) && i + 1 < s.Length && char.IsLowSurrogate (s [i + 1])) {
+					i++;
+				}
+			}
+
+			var bytes = checked ((codePointCount + 1) * sizeof (int));
+			var buffer = Marshal.AllocHGlobal (bytes);
+			try {
+				var offset = 0;
+				for (var i = 0; i < s.Length; i++) {
+					var codePoint = char.ConvertToUtf32 (s, i);
+					if (char.IsHighSurrogate (s [i])) {
+						i++;
+					}
+
+					Marshal.WriteInt32 (buffer, offset, codePoint);
+					offset += sizeof (int);
+				}
+
+				Marshal.WriteInt32 (buffer, offset, 0);
+				return action (buffer);
+			} finally {
+				Marshal.FreeHGlobal (buffer);
+			}
 		}
 
 		static IntPtr stdscr;
@@ -344,8 +412,8 @@ namespace Unix.Terminal {
 		static public int move (int line, int col) => methods.move (line, col);
 		static public int curs_set (int visibility) => methods.curs_set (visibility);
 		//static public int addch (int ch) => methods.addch (ch);
-		static public int addwstr (string s) => methods.addwstr (s);
-		static public int mvaddwstr (int y, int x, string s) => methods.mvaddwstr (y, x, s);
+		static public int addwstr (string s) => CallWideString (s, ptr => methods.addwstr (ptr));
+		static public int mvaddwstr (int y, int x, string s) => CallWideString (s, ptr => methods.mvaddwstr (y, x, ptr));
 		static public int wmove (IntPtr win, int line, int col) => methods.wmove (win, line, col);
 		static public int waddch (IntPtr win, int ch) => methods.waddch (win, ch);
 		static public int attron (int attrs) => methods.attron (attrs);
@@ -421,8 +489,11 @@ namespace Unix.Terminal {
 		public delegate int curs_set (int visibility);
 		public delegate int addch (int ch);
 		public delegate int mvaddch (int y, int x, int ch);
-		public delegate int addwstr ([MarshalAs (UnmanagedType.LPWStr)] string s);
-		public delegate int mvaddwstr (int y, int x, [MarshalAs (UnmanagedType.LPWStr)] string s);
+		public delegate int add_wch (IntPtr ch);
+		public delegate int mvadd_wch (int y, int x, IntPtr ch);
+		public delegate int setcchar (IntPtr wcval, IntPtr wch, uint attrs, short colorPair, IntPtr opts);
+		public delegate int addwstr (IntPtr s);
+		public delegate int mvaddwstr (int y, int x, IntPtr s);
 		public delegate int wmove (IntPtr win, int line, int col);
 		public delegate int waddch (IntPtr win, int ch);
 		public delegate int attron (int attrs);
@@ -496,6 +567,9 @@ namespace Unix.Terminal {
 		public readonly Delegates.curs_set curs_set;
 		public readonly Delegates.addch addch;
 		public readonly Delegates.mvaddch mvaddch;
+		public readonly Delegates.add_wch add_wch;
+		public readonly Delegates.mvadd_wch mvadd_wch;
+		public readonly Delegates.setcchar setcchar;
 		public readonly Delegates.addwstr addwstr;
 		public readonly Delegates.mvaddwstr mvaddwstr;
 		public readonly Delegates.wmove wmove;
@@ -573,6 +647,9 @@ namespace Unix.Terminal {
 			curs_set = lib.GetNativeMethodDelegate<Delegates.curs_set> ("curs_set");
 			addch = lib.GetNativeMethodDelegate<Delegates.addch> ("addch");
 			mvaddch = lib.GetNativeMethodDelegate<Delegates.mvaddch> ("mvaddch");
+			add_wch = lib.GetNativeMethodDelegate<Delegates.add_wch> ("add_wch");
+			mvadd_wch = lib.GetNativeMethodDelegate<Delegates.mvadd_wch> ("mvadd_wch");
+			setcchar = lib.GetNativeMethodDelegate<Delegates.setcchar> ("setcchar");
 			addwstr = lib.GetNativeMethodDelegate<Delegates.addwstr> ("addwstr");
 			mvaddwstr = lib.GetNativeMethodDelegate<Delegates.mvaddwstr> ("mvaddwstr");
 			wmove = lib.GetNativeMethodDelegate<Delegates.wmove> ("wmove");

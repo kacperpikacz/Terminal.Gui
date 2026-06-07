@@ -103,7 +103,7 @@ namespace Terminal.Gui {
 						Curses.addch ((int)(uint)' ');
 						contents [crow, ccol, 0] = (int)(uint)' ';
 					} else {
-						Curses.addch (MapLineDrawingRuneToAcs (rune));
+						AddCursesRune (rune);
 						contents [crow, ccol, 0] = (int)(uint)rune;
 					}
 					contents [crow, ccol, 1] = CurrentAttribute;
@@ -128,6 +128,17 @@ namespace Terminal.Gui {
 			if (sync) {
 				UpdateScreen ();
 			}
+		}
+
+		static void AddCursesRune (Rune rune)
+		{
+			var mapped = MapLineDrawingRuneToAcs (rune);
+			if (mapped != (int)(uint)rune) {
+				Curses.addch (mapped);
+				return;
+			}
+
+			Curses.add_wch ((int)(uint)rune);
 		}
 
 		static int MapLineDrawingRuneToAcs (Rune rune)
