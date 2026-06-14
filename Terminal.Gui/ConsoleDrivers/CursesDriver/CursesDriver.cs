@@ -30,6 +30,7 @@ namespace Terminal.Gui {
 		CursorVisibility? currentCursorVisibility = null;
 		IClipboard clipboard;
 		int [,,] contents;
+		bool processingWinChange;
 
 		public override int [,,] Contents => contents;
 
@@ -186,10 +187,18 @@ namespace Terminal.Gui {
 
 		private void ProcessWinChange ()
 		{
+			if (processingWinChange)
+				return;
+
 			if (Curses.CheckWinChange ()) {
-				ResizeScreen ();
-				UpdateOffScreen ();
-				TerminalResized?.Invoke ();
+				try {
+					processingWinChange = true;
+					ResizeScreen ();
+					UpdateOffScreen ();
+					TerminalResized?.Invoke ();
+				} finally {
+					processingWinChange = false;
+				}
 			}
 		}
 
