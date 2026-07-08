@@ -139,7 +139,10 @@ namespace Terminal.Gui {
 				return;
 			}
 
-			Curses.add_wch ((int)(uint)rune);
+			// Avoid the platform-specific wchar_t/cchar_t ABI. Passing explicit
+			// UTF-8 through ncurses' narrow-string API prevents replacement glyphs
+			// for dense block and Braille output on macOS terminals.
+			Curses.addutf8 (rune.ToString ());
 		}
 
 		static int MapLineDrawingRuneToAcs (Rune rune)

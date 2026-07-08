@@ -46,6 +46,7 @@
 
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 using Terminal.Gui;
 
 namespace Unix.Terminal {
@@ -81,6 +82,9 @@ namespace Unix.Terminal {
 
 		[DllImport ("libc")]
 		public extern static int setlocale (int cate, [MarshalAs (UnmanagedType.LPStr)] string locale);
+
+		[DllImport ("libc", SetLastError = true)]
+		static extern int setenv (string name, string value, int overwrite);
 #if USE_IOCTL
 
 		[DllImport ("libc")]
@@ -130,6 +134,17 @@ namespace Unix.Terminal {
 
 		static public Window initscr ()
 		{
+			// xterm-ghostty advertises the terminfo `rep` capability. macOS
+			// ncurses applies it to the final byte of repeated multibyte UTF-8
+			// characters (for example █ becomes 0x88 + CSI n b), which Ghostty
+			// correctly decodes as replacement glyphs. xterm-256color exposes
+			// the compatible capabilities without that unsafe optimization.
+			if (IsGhostty ()
+				&& string.Equals (Environment.GetEnvironmentVariable ("TERM"), "xterm-ghostty", StringComparison.Ordinal)) {
+				Environment.SetEnvironmentVariable ("TERM", "xterm-256color");
+				setenv ("TERM", "xterm-256color", 1);
+			}
+
 			setlocale (LC_ALL, "");
 			FindNCurses ();
 
@@ -149,6 +164,10 @@ namespace Unix.Terminal {
 			}
 			return main_window;
 		}
+
+		static bool IsGhostty () =>
+			string.Equals (Environment.GetEnvironmentVariable ("TERM_PROGRAM"), "ghostty", StringComparison.OrdinalIgnoreCase)
+			|| !string.IsNullOrEmpty (Environment.GetEnvironmentVariable ("GHOSTTY_RESOURCES_DIR"));
 
 		public static int Lines {
 			get {
@@ -214,6 +233,19 @@ namespace Unix.Terminal {
 		public static int add_wch (int ch) => CallWideChar (ch, ptr => methods.add_wch (ptr));
 
 		public static int mvadd_wch (int y, int x, int ch) => CallWideChar (ch, ptr => methods.mvadd_wch (y, x, ptr));
+
+		public static int addutf8 (string s)
+		{
+			var bytes = Encoding.UTF8.GetBytes (s);
+			var buffer = Marshal.AllocHGlobal (bytes.Length + 1);
+			try {
+				Marshal.Copy (bytes, 0, buffer, bytes.Length);
+				Marshal.WriteByte (buffer, bytes.Length, 0);
+				return methods.addnstr (buffer, bytes.Length);
+			} finally {
+				Marshal.FreeHGlobal (buffer);
+			}
+		}
 
 		static int CallWideChar (int ch, Func<IntPtr, int> action)
 		{
@@ -494,6 +526,7 @@ namespace Unix.Terminal {
 		public delegate int setcchar (IntPtr wcval, IntPtr wch, uint attrs, short colorPair, IntPtr opts);
 		public delegate int addwstr (IntPtr s);
 		public delegate int mvaddwstr (int y, int x, IntPtr s);
+		public delegate int addnstr (IntPtr s, int n);
 		public delegate int wmove (IntPtr win, int line, int col);
 		public delegate int waddch (IntPtr win, int ch);
 		public delegate int attron (int attrs);
@@ -572,6 +605,7 @@ namespace Unix.Terminal {
 		public readonly Delegates.setcchar setcchar;
 		public readonly Delegates.addwstr addwstr;
 		public readonly Delegates.mvaddwstr mvaddwstr;
+		public readonly Delegates.addnstr addnstr;
 		public readonly Delegates.wmove wmove;
 		public readonly Delegates.waddch waddch;
 		public readonly Delegates.attron attron;
@@ -652,6 +686,7 @@ namespace Unix.Terminal {
 			setcchar = lib.GetNativeMethodDelegate<Delegates.setcchar> ("setcchar");
 			addwstr = lib.GetNativeMethodDelegate<Delegates.addwstr> ("addwstr");
 			mvaddwstr = lib.GetNativeMethodDelegate<Delegates.mvaddwstr> ("mvaddwstr");
+			addnstr = lib.GetNativeMethodDelegate<Delegates.addnstr> ("addnstr");
 			wmove = lib.GetNativeMethodDelegate<Delegates.wmove> ("wmove");
 			waddch = lib.GetNativeMethodDelegate<Delegates.waddch> ("waddch");
 			attron = lib.GetNativeMethodDelegate<Delegates.attron> ("attron");
