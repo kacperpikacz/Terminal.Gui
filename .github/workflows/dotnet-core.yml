@@ -1,8 +1,9 @@
 name: .NET Core
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ v1_release, v1_develop ]
+    branches: [ v1_release ]
     paths-ignore:
       - '**.md'
   pull_request:
